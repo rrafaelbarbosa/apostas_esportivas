@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analista de Cartões Pro - Executivo</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #34495e;
+            --bg: #f4f7f6;
+            --text: #333;
+            --white: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--white);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary);
+            font-weight: 600;
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 10px;
+            text-align: center;
+        }
+
+        .selectors {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            background: #fff;
+            font-size: 1rem;
+        }
+
+        .btn-calc {
+            grid-column: span 3;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-calc:hover {
+            background-color: #1a252f;
+        }
+
+        #result-area {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+
+        .semaphore {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 50px;
+            margin-top: 10px;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        /* Cores do Semáforo */
+        .over { background-color: #27ae60; color: white; } /* Verde - Apostar Over */
+        .neutral { background-color: #f1c40f; color: #333; } /* Amarelo - Neutro */
+        .under { background-color: #e74c3c; color: white; } /* Vermelho - Apostar Under */
+
+        .data-detail {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Simulador de Tendência de Cartões</h1>
+
+    <div class="selectors">
+        <div class="field-group">
+            <label>Time Mandante</label>
+            <select id="timeA"></select>
+        </div>
+        <div class="field-group">
+            <label>Time Visitante</label>
+            <select id="timeB"></select>
+        </div>
+        <div class="field-group">
+            <label>Árbitro</label>
+            <select id="arbitro"></select>
+        </div>
+        <button class="btn-calc" onclick="calcular()">REALIZAR SIMULAÇÃO</button>
+    </div>
+
+    <div id="result-area">
+        <div id="resultado-texto">Projeção Final:</div>
+        <div id="valor-final" style="font-size: 3rem; font-weight: bold;">0.0</div>
+        <div id="semaforo-box" class="semaphore">---</div>
+        <div class="data-detail" id="detalhes"></div>
+    </div>
+</div>
+
+<script>
+    // Dados extraídos das imagens fornecidas
+    const times = [
+        { nome: "Santos", p: 12, ca: 40, cv: 1 },
+        { nome: "Corinthians", p: 12, ca: 34, cv: 3 },
+        { nome: "RB Bragantino", p: 12, ca: 35, cv: 2 },
+        { nome: "Mirassol", p: 11, ca: 31, cv: 2 },
+        { nome: "Flamengo", p: 11, ca: 23, cv: 4 },
+        { nome: "Coritiba", p: 12, ca: 25, cv: 3 },
+        { nome: "Botafogo", p: 11, ca: 27, cv: 2 },
+        { nome: "Grêmio", p: 12, ca: 26, cv: 2 },
+        { nome: "Fluminense", p: 12, ca: 28, cv: 1 },
+        { nome: "Vasco", p: 12, ca: 23, cv: 1 },
+        { nome: "São Paulo", p: 12, ca: 23, cv: 1 },
+        { nome: "Palmeiras", p: 12, ca: 22, cv: 1 },
+        { nome: "Internacional", p: 12, ca: 25, cv: 0 }
+    ];
+
+    const arbitros = [
+        { nome: "Davi de Oliveira Lacerda", j: 9, c: 41 },
+        { nome: "Bruno Arleu de Araújo", j: 8, c: 42 },
+        { nome: "Rodrigo José Pereira de Lima", j: 8, c: 37 },
+        { nome: "Wilton Pereira Sampaio", j: 7, c: 31 },
+        { nome: "Raphael Claus", j: 7, c: 32 },
+        { nome: "Anderson Daronco", j: 6, c: 33 },
+        { nome: "Paulo Cesar Zanovelli", j: 6, c: 34 }
+    ];
+
+    // Popular os selects
+    function popularCampos() {
+        const selA = document.getElementById('timeA');
+        const selB = document.getElementById('timeB');
+        const selArb = document.getElementById('arbitro');
+
+        times.forEach((t, index) => {
+            let opt = `<option value="${index}">${t.nome}</option>`;
+            selA.innerHTML += opt;
+            selB.innerHTML += opt;
+        });
+
+        arbitros.forEach((a, index) => {
+            selArb.innerHTML += `<option value="${index}">${a.nome}</option>`;
+        });
+    }
+
+    function calcular() {
+        const tA = times[document.getElementById('timeA').value];
+        const tB = times[document.getElementById('timeB').value];
+        const arb = arbitros[document.getElementById('arbitro').value];
+
+        // Cálculo de médias (Total de cartões / Total de jogos)
+        const mediaA = (tA.ca + tA.cv) / tA.p;
+        const mediaB = (tB.ca + tB.cv) / tB.p;
+        const mediaArb = arb.c / arb.j;
+
+        // Projeção: Média dos times + Influência do Árbitro
+        // A lógica aqui é a média aritmética simples entre os três fatores
+        const projecao = (mediaA + mediaB + mediaArb) / 1.5; // Ajuste de peso para escala 0-10
+
+        exibirResultado(projecao.toFixed(2), mediaA, mediaB, mediaArb);
+    }
+
+    function exibirResultado(valor, mA, mB, mArb) {
+        const area = document.getElementById('result-area');
+        const vFinal = document.getElementById('valor-final');
+        const semBox = document.getElementById('semaforo-box');
+        const det = document.getElementById('detalhes');
+
+        area.style.display = 'block';
+        vFinal.innerText = valor;
+
+        // Lógica do Semáforo
+        if (valor > 6.0) {
+            semBox.innerText = "ALTA TENDÊNCIA (OVER)";
+            semBox.className = "semaphore over";
+        } else if (valor >= 4.5) {
+            semBox.innerText = "NEUTRO";
+            semBox.className = "semaphore neutral";
+        } else {
+            semBox.innerText = "BAIXA TENDÊNCIA (UNDER)";
+            semBox.className = "semaphore under";
+        }
+
+        det.innerHTML = `Médias individuais: Mandante: ${mA.toFixed(2)} | Visitante: ${mB.toFixed(2)} | Árbitro: ${mArb.toFixed(2)}`;
+    }
+
+    popularCampos();
+</script>
+
+</body>
+</html>
